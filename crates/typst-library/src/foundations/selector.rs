@@ -112,12 +112,51 @@ fn matches_normalized(left: Option<&Value>, right: Option<&Value>) -> bool {
     let left_selector = Selector::from_value(left.clone()).ok();
     let right_selector = Selector::from_value(right.clone()).ok();
 
-    // If both can be converted to selectors, compare them
-    if let (Some(left_sel), Some(right_sel)) = (left_selector, right_selector) {
-        left_sel == right_sel
-    } else {
-        false
+    // If both can be converted to selectors, check if they match
+    // When comparing field values in selectors, we need to also check if 
+    // the left selector would match elements that the right selector matches
+    if let (Some(left_sel), Some(right_sel)) = (&left_selector, &right_selector) {
+        if left_sel == right_sel {
+            return true;
+        }
+        
+        // Special case: when comparing selectors in nested contexts (like Or/And),
+        // we need to recursively apply matches_normalized to field values
+        match (left_sel, right_sel) {
+            (Selector::Elem(left_elem, left_dict), Selector::Elem(right_elem, right_dict)) => {
+                if left_elem != right_elem {
+                    return false;
+                }
+                
+                // Both have no fields - they match
+                if left_dict.is_none() && right_dict.is_none() {
+                    return true;
+                }
+                
+                // If both have fields, compare them recursively
+                if let (Some(left_fields), Some(right_fields)) = (left_dict, right_dict) {
+                    if left_fields.len() != right_fields.len() {
+                        return false;
+                    }
+                    
+                    // Compare each field
+                    for (left_field, right_field) in left_fields.iter().zip(right_fields.iter()) {
+                        if left_field.0 != right_field.0 {
+                            return false;
+                        }
+                        // Recursively compare field values
+                        if !matches_normalized(Some(&left_field.1), Some(&right_field.1)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            }
+            _ => {}
+        }
     }
+    
+    false
 }
 
 impl Selector {
