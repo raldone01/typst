@@ -343,3 +343,14 @@ A
 
 #show figure: none
 #figure(rect(width: 10pt, height: 10pt), caption: [A])
+
+--- outline-where-selector-nested-selector ---
+
+#show outline.where(
+  target: figure.where(kind: image).or(figure.where(kind: raw)),
+): it => [*Custom TOC* #it]
+
+#outline(target: figure)
+
+#figure(rect(width: 10pt, height: 10pt), caption: [A])
+#figure(raw("<svg></svg>"), caption: [B])
