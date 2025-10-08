@@ -94,6 +94,35 @@ pub enum Selector {
     After { selector: Arc<Self>, start: Arc<Self>, inclusive: bool },
 }
 
+/// Helper function to check if two values match after normalization.
+/// This handles the case where a `Func` value should match a `Selector` value
+/// if they refer to the same element.
+fn matches_normalized(left: Option<&Value>, right: Option<&Value>) -> bool {
+    let (Some(left), Some(right)) = (left, right) else {
+        return false;
+    };
+
+    // Try to extract selectors from both values
+    let left_selector = match left {
+        Value::Func(func) => func.element().map(|elem| Selector::Elem(elem, None)),
+        Value::Symbol(symbol) => Some(Selector::Regex(Regex::new(&regex::escape(symbol.get())).unwrap())),
+        _ => Selector::from_value(left.clone()).ok(),
+    };
+
+    let right_selector = match right {
+        Value::Func(func) => func.element().map(|elem| Selector::Elem(elem, None)),
+        Value::Symbol(symbol) => Some(Selector::Regex(Regex::new(&regex::escape(symbol.get())).unwrap())),
+        _ => Selector::from_value(right.clone()).ok(),
+    };
+
+    // If both can be converted to selectors, compare them
+    if let (Some(left_sel), Some(right_sel)) = (left_selector, right_selector) {
+        left_sel == right_sel
+    } else {
+        false
+    }
+}
+
 impl Selector {
     /// Define a simple text selector.
     pub fn text(text: &str) -> StrResult<Self> {
@@ -125,7 +154,9 @@ impl Selector {
             Self::Elem(element, dict) => {
                 target.elem() == *element
                     && dict.iter().flat_map(|dict| dict.iter()).all(|(id, value)| {
-                        target.get(*id, styles).as_ref().ok() == Some(value)
+                        let field_value = target.get(*id, styles).ok();
+                        field_value.as_ref() == Some(value)
+                            || matches_normalized(field_value.as_ref(), Some(value))
                     })
             }
             Self::Label(label) => target.label() == Some(*label),

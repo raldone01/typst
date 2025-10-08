@@ -326,3 +326,29 @@ A
 
 = 测
 = 很
+
+--- outline-where-selector ---
+// Test that show rules with outline.where(target: ...) work correctly
+#show outline.where(target: heading): it => block(
+  fill: rgb("e8f3ff"),
+  inset: 5pt,
+  [*Custom TOC* #it]
+)
+
+#outline()
+
+#show heading: none
+= First
+== Second
+
+--- outline-where-selector-figure ---
+// Test with figure target
+#show outline.where(target: figure): it => block(
+  fill: rgb("ffe8f3"),
+  inset: 5pt,
+  [*Custom Figures* #it]
+)
+
+#outline(target: figure, title: [Figures])
+
+#figure(rect(width: 20pt, height: 10pt), caption: [A])
