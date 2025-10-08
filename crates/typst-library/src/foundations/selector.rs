@@ -97,23 +97,16 @@ pub enum Selector {
 /// Helper function to check if two values match after normalization.
 /// This handles the case where a `Func` value should match a `Selector` value
 /// if they refer to the same element.
+///
+/// Uses the standard `Selector::from_value` conversion to normalize both values.
 fn matches_normalized(left: Option<&Value>, right: Option<&Value>) -> bool {
     let (Some(left), Some(right)) = (left, right) else {
         return false;
     };
 
-    // Try to extract selectors from both values
-    let left_selector = match left {
-        Value::Func(func) => func.element().map(|elem| Selector::Elem(elem, None)),
-        Value::Symbol(symbol) => Some(Selector::Regex(Regex::new(&regex::escape(symbol.get())).unwrap())),
-        _ => Selector::from_value(left.clone()).ok(),
-    };
-
-    let right_selector = match right {
-        Value::Func(func) => func.element().map(|elem| Selector::Elem(elem, None)),
-        Value::Symbol(symbol) => Some(Selector::Regex(Regex::new(&regex::escape(symbol.get())).unwrap())),
-        _ => Selector::from_value(right.clone()).ok(),
-    };
+    // Try to convert both values to selectors using the standard conversion
+    let left_selector = Selector::from_value(left.clone()).ok();
+    let right_selector = Selector::from_value(right.clone()).ok();
 
     // If both can be converted to selectors, compare them
     if let (Some(left_sel), Some(right_sel)) = (left_selector, right_selector) {
